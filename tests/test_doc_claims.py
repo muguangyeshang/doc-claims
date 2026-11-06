@@ -94,6 +94,69 @@ class TestEndToEnd(unittest.TestCase):
         self.assertIn("--init", r.stdout)
 
 
+class TestRealMachineFixes(unittest.TestCase):
+    """两个 Windows 真机实测抓到的缺陷，锁回归（CI ubuntu 上测不出，见 CHANGELOG 1.1.3 后补）。"""
+
+    def setUp(self):
+        self.tmp = tempfile.mkdtemp()
+
+    def write(self, name, content):
+        path = os.path.join(self.tmp, name)
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        with open(path, "w", encoding="utf-8") as f:
+            f.write(content)
+        return path
+
+    def test_thousand_separator_claim(self):
+        """文档写 11,700（带千分位逗号）不得崩溃，应与真值 11700 归一比对。"""
+        docs = self.write("docs/a.md", "吞吐约 11,700 routes/s\n")
+        self.write("claims.json", json.dumps({
+            "files": [docs.replace("\\", "/")],
+            "types": [{"name": "吞吐", "pattern": r"([\d,]+) routes/s",
+                       "truth": {"literal": 11700}}]}, ensure_ascii=False))
+        r = run_claims(os.path.join(self.tmp, "claims.json"))
+        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+        self.assertIn("一致 1", r.stdout)
+
+    def test_thousand_separator_drift_detected(self):
+        """千分位不仅要不崩，漂移也要抓得出：写 11,700 实际 9,000 → 红。"""
+        docs = self.write("docs/a.md", "吞吐约 11,700 routes/s\n")
+        self.write("claims.json", json.dumps({
+            "files": [docs.replace("\\", "/")],
+            "types": [{"name": "吞吐", "pattern": r"([\d,]+) routes/s",
+                       "truth": {"literal": 9000}}]}, ensure_ascii=False))
+        r = run_claims(os.path.join(self.tmp, "claims.json"))
+        self.assertEqual(r.returncode, 1)
+        self.assertIn("实际 9000", r.stdout)
+
+    def test_truth_cmd_utf8_output(self):
+        """真值命令输出含中文/UTF-8 时，不得因系统 locale（Windows GBK）解码崩溃。"""
+        docs = self.write("docs/a.md", "留出集 9/9\n")
+        counter = self.write("count.py", "print('留出集 9/9')\n")
+        self.write("claims.json", json.dumps({
+            "files": [docs.replace("\\", "/")],
+            "types": [{"name": "成绩", "pattern": r"留出集 (\d+)/9",
+                       "truth": {"cmd": f'"{sys.executable}" "{counter}"'}}]},
+            ensure_ascii=False))
+        r = run_claims(os.path.join(self.tmp, "claims.json"))
+        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+        self.assertIn("一致 1", r.stdout)
+
+    def test_truth_cmd_binary_junk_replaced_not_crash(self):
+        """真值命令输出混入非法字节时，errors=replace 兜底出首个数字而不是崩。"""
+        docs = self.write("docs/a.md", "共 5 个测试\n")
+        # utf-8 非法字节序列 + 合法数字
+        counter = self.write("count.py",
+                             "import sys; sys.stdout.buffer.write(b'\\xff\\xfe 5 tests')\n")
+        self.write("claims.json", json.dumps({
+            "files": [docs.replace("\\", "/")],
+            "types": [{"name": "测试", "pattern": r"共 (\d+) 个测试",
+                       "truth": {"cmd": f'"{sys.executable}" "{counter}"'}}]},
+            ensure_ascii=False))
+        r = run_claims(os.path.join(self.tmp, "claims.json"))
+        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+
+
 class TestDemoRepo(unittest.TestCase):
     def test_demo_passes(self):
         r = run_claims(os.path.join(ROOT, "claims.json"))
