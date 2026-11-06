@@ -1,0 +1,32 @@
+{
+  "files": [
+    "README.md"
+  ],
+  "exempt_patterns": [
+    "历史记录",
+    "例："
+  ],
+  "types": [
+    {
+      "name": "demo一致数",
+      "pattern": "（(\\d+)/3 一致",
+      "truth": {
+        "cmd": "python -c \"import subprocess,re;s=subprocess.run(['python','doc_claims.py','--config','claims.json'],capture_output=True,text=True,encoding='utf-8',errors='replace');m=re.search(r'一致 (\\d+)',s.stdout);print(m.group(1) if m else 0)\""
+      }
+    },
+    {
+      "name": "demo豁免数",
+      "pattern": "豁免 (\\d+) 行生效",
+      "truth": {
+        "cmd": "python -c \"import subprocess,re;s=subprocess.run(['python','doc_claims.py','--config','claims.json'],capture_output=True,text=True,encoding='utf-8',errors='replace');m=re.search(r'豁免模式 (\\d+)',s.stdout);print(m.group(1) if m else 0)\""
+      }
+    },
+    {
+      "name": "拦截漂移数",
+      "pattern": "拦下过 (\\d+) 处",
+      "truth": {
+        "literal": 8
+      }
+    }
+  ]
+}
