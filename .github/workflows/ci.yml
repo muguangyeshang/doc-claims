@@ -1,0 +1,31 @@
+name: CI
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.8", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: demo PASS（3/3 一致 + 豁免生效）
+        run: python doc_claims.py --config claims.json
+      - name: demo 退出码 0
+        run: python doc_claims.py --config claims.json > /dev/null
+      - name: --init 可生成可解析
+        run: |
+          cd example && python ../doc_claims.py --init /tmp/init.json
+          python -c "import json; json.load(open('/tmp/init.json'))"
+      - name: 漂移必须红（把文档改错一个数字，期望 exit 1）
+        run: |
+          sed -i 's/12 个技能/13 个技能/' example/docs/README.example.md
+          python doc_claims.py --config claims.json > /dev/null && exit 1 || [ $? -eq 1 ]
+          sed -i 's/13 个技能/12 个技能/' example/docs/README.example.md
+          python doc_claims.py --config claims.json > /dev/null
