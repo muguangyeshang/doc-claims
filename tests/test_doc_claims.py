@@ -192,6 +192,42 @@ class TestNonIntegerCapture(unittest.TestCase):
         self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
 
 
+class TestRound4Fixes(unittest.TestCase):
+    """第四轮实战抓到的两个缺陷：TODO 字面量裸崩 + --init 静默覆盖手工配置。"""
+
+    def setUp(self):
+        self.tmp = tempfile.mkdtemp()
+
+    def write(self, name, content):
+        path = os.path.join(self.tmp, name)
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        with open(path, "w", encoding="utf-8") as f:
+            f.write(content)
+        return path
+
+    def test_todo_literal_explicit_error_not_crash(self):
+        """--init 生成的 TODO 模板用户忘改 → 显式 ✗ 带改进提示，不裸 traceback。"""
+        docs = self.write("docs/a.md", "本仓库有 2 篇文档" + chr(10))
+        self.write("claims.json", json.dumps({
+            "files": [docs.replace("\\", "/")],
+            "types": [{"name": "文档数", "pattern": r"(\d+) 篇文档",
+                       "truth": {"literal": "TODO"}}]}, ensure_ascii=False))
+        r = run_claims(os.path.join(self.tmp, "claims.json"))
+        self.assertEqual(r.returncode, 1)
+        self.assertIn("TODO", r.stdout)
+        self.assertNotIn("Traceback", r.stdout + r.stderr)
+
+    def test_init_refuses_overwrite(self):
+        """--init 对已有配置必须拒绝——手工调好的 claims.json 是数据。"""
+        keep = self.write("keep.json", '{"手工": "保留"}')
+        r = subprocess.run(
+            [sys.executable, SCRIPT, "--init", keep],
+            capture_output=True, text=True, cwd=ROOT, encoding="utf-8")
+        self.assertEqual(r.returncode, 1)
+        self.assertIn("已存在", r.stdout)
+        self.assertEqual(json.load(open(keep, encoding="utf-8")), {"手工": "保留"})
+
+
 class TestDemoRepo(unittest.TestCase):
     def test_demo_passes(self):
         r = run_claims(os.path.join(ROOT, "claims.json"))

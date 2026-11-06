@@ -34,7 +34,13 @@ def truth_value(spec, cache):
     if key in cache:
         return cache[key]
     if "literal" in spec:
-        v = int(spec["literal"])
+        # literal 也可能是忘改的 TODO 或写错的量词——显式报错走 ✗ 通路，
+        # 不裸 traceback（第四轮实战抓到：--init 生成的 TODO 模板用户忘改即崩）
+        try:
+            v = int(spec["literal"])
+        except (ValueError, TypeError):
+            raise RuntimeError(f"literal 不是整数: {spec['literal']!r}——"
+                               "把 TODO 换成真值命令或整数字面量") from None
     elif "cmd" in spec:
         # Windows 真机坑：text=True 默认走系统 locale（GBK），子进程输出 UTF-8 会崩。
         # 显式 UTF-8 + errors=replace，CI(ubuntu)/本地(Windows) 行为一致。
@@ -55,6 +61,11 @@ def truth_value(spec, cache):
 def cmd_init(args):
     """脚手架：扫文档，按常见数字声明场景生成 claims.json 初稿。
     用户 80% 的成本在写配置——init 把从零到第一份可用配置的时间压到一条命令。"""
+    # 手工调好的 claims.json 是数据不是脚手架，--init 拒绝覆盖（与 flow-router init 一致）。
+    # 第四轮实战抓到：对已有配置重跑 --init 把手工配置静默抹掉了。
+    if os.path.exists(args.init):
+        print(f"{args.init} 已存在，不动它。要重生成先手工删掉或换文件名。")
+        return 1
     md_files = []
     for pat in ["**/*.md", "*.md"]:
         md_files += glob.glob(pat, recursive=True)
