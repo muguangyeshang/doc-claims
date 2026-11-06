@@ -2,6 +2,14 @@
 
 本项目遵循 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，版本号遵循语义化版本。
 
+## [1.1.5] - 2026-11-07
+
+### 修复
+- 模式捕获组抓到非整数（如量词"万级"）时裸 traceback 崩掉整个进程 → 显式 ✗（提示检查 pattern 是否把量词包进了捕获组）、跑完其余核对、exit 1。第三轮实战（doc-claims 核对 flow-router README）抓到
+
+### 新增
+- 2 例回归测试锁上述行为；claims-self.json 自证配置：README 三条活声明当场重算 3/3 一致
+
 ## [1.1.4] - 2026-11-07
 
 ### 新增

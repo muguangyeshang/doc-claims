@@ -141,7 +141,18 @@ def main():
                 for m in re.finditer(t["pattern"], line):
                     total += 1
                     # 千分位逗号：文档常写 "11,700"，JSON/真值侧是 11700，比对前归一
-                    written = int(m.group(1).replace(",", ""))
+                    # 捕获组必须是整数：抓到非数字（如"万级"）= 模式写错，
+                    # 显式报 ✗ 并继续跑完其余核对，不裸 traceback 崩掉整个进程
+                    # （2026-11-07 实战第三轮抓到：README 改成"万级 routes/s"
+                    #  量级表述后，旧模式 ([\d,]+) 之外的写法会抓到非数字）
+                    try:
+                        written = int(m.group(1).replace(",", ""))
+                    except ValueError:
+                        total += 1
+                        bad += 1
+                        print(f"  ✗ {fp}:{i} {t['name']} 模式捕获组不是整数（'{m.group(1)}'），检查 pattern "
+                              f"是否把量词也包进了捕获组｜{line.strip()[:60]}")
+                        continue
                     try:
                         actual = truth_value(t["truth"], cache)
                     except RuntimeError as e:

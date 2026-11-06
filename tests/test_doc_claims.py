@@ -157,6 +157,41 @@ class TestRealMachineFixes(unittest.TestCase):
         self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
 
 
+class TestNonIntegerCapture(unittest.TestCase):
+    """第三轮实战抓到：模式捕获组抓到非数字（如量词"万级"）时，
+    不得裸 traceback 崩掉整个进程——显式 ✗、跑完其余核对、exit 1。"""
+
+    def setUp(self):
+        self.tmp = tempfile.mkdtemp()
+
+    def write(self, name, content):
+        path = os.path.join(self.tmp, name)
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        with open(path, "w", encoding="utf-8") as f:
+            f.write(content)
+        return path
+
+    def test_non_integer_capture_explicit_error(self):
+        docs = self.write("docs/a.md", "单线程万级 routes/s" + chr(10))
+        self.write("claims.json", json.dumps({
+            "files": [docs.replace("\\", "/")],
+            "types": [{"name": "吞吐", "pattern": r"单线程(万级) routes/s",
+                       "truth": {"literal": 10000}}]}, ensure_ascii=False))
+        r = run_claims(os.path.join(self.tmp, "claims.json"))
+        self.assertEqual(r.returncode, 1)
+        self.assertIn("不是整数", r.stdout)
+        self.assertNotIn("Traceback", r.stdout + r.stderr)
+
+    def test_integer_capture_still_works(self):
+        docs = self.write("docs/a.md", "共 7 个测试" + chr(10))
+        self.write("claims.json", json.dumps({
+            "files": [docs.replace("\\", "/")],
+            "types": [{"name": "测试", "pattern": r"共 (\d+) 个测试",
+                       "truth": {"literal": 7}}]}, ensure_ascii=False))
+        r = run_claims(os.path.join(self.tmp, "claims.json"))
+        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+
+
 class TestDemoRepo(unittest.TestCase):
     def test_demo_passes(self):
         r = run_claims(os.path.join(ROOT, "claims.json"))
