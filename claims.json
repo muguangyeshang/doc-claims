@@ -1,0 +1,21 @@
+{
+  "files": ["example/docs/*.md"],
+  "exempt_patterns": ["历史记录", "引用原文"],
+  "types": [
+    {
+      "name": "技能总数",
+      "pattern": "(\\d+) 个技能",
+      "truth": { "cmd": "python example/count_skills.py" }
+    },
+    {
+      "name": "流程数",
+      "pattern": "(\\d+) 条流程",
+      "truth": { "literal": 5 }
+    },
+    {
+      "name": "检查条数",
+      "pattern": "(\\d+) 项检查",
+      "truth": { "literal": 46 }
+    }
+  ]
+}
