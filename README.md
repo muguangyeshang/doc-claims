@@ -1,5 +1,7 @@
 # doc-claims
 
+[![CI](https://github.com/AYAN-2026/doc-claims/actions/workflows/ci.yml/badge.svg)](https://github.com/AYAN-2026/doc-claims/actions/workflows/ci.yml)
+
 **Problem:** 你的 README 写着 "46 tests"、"5 workflows"。改了代码没人记得改文档，读的人被误导。单元测试拦不住这个——文档自己不会跑。
 
 **doc-claims 把文档里的数字变成 CI 断言：** 每类数字登记成「正则模式 + 真值重算命令」，扫描活文档逐处与当场重算值比对，漂移即红。
