@@ -21,6 +21,7 @@ doc-claims —— 活文档数字核对器
 import argparse
 import glob
 import json
+import os
 import re
 import subprocess
 import sys
@@ -48,12 +49,69 @@ def truth_value(spec, cache):
     return v
 
 
+def cmd_init(args):
+    """脚手架：扫文档，按常见数字声明场景生成 claims.json 初稿。
+    用户 80% 的成本在写配置——init 把从零到第一份可用配置的时间压到一条命令。"""
+    md_files = []
+    for pat in ["**/*.md", "*.md"]:
+        md_files += glob.glob(pat, recursive=True)
+    md_files = sorted(set(md_files))
+    if not md_files:
+        sys.exit("当前目录没有 markdown 文件，--init 无从下手")
+
+    # 常见声明场景 → 模式 + 默认真值（literal 留待用户填；cmd 给了可跑的探针）
+    candidates = [
+        ("测试数量", r"(\d+) 个测试", {"cmd": "pytest --collect-only -q 2>/dev/null | tail -1"}),
+        ("文档文件数", r"(\d+) 篇文档", {"literal": "TODO"}),
+        ("模块数", r"(\d+) 个模块", {"literal": "TODO"}),
+        ("版本号", r"version (\d+)\.\d+\.\d+", {"literal": "TODO"}),
+    ]
+    found = []
+    for name, pat, truth in candidates:
+        rx = re.compile(pat)
+        hits = []
+        for fp in md_files:
+            try:
+                text = open(fp, encoding="utf-8").read()
+            except (OSError, UnicodeDecodeError):
+                continue
+            hits += [(fp, m.group(1)) for m in rx.finditer(text)]
+        if hits:
+            found.append((name, pat, truth, hits[:5]))
+
+    out = {
+        "files": ["*.md", "docs/**/*.md"],
+        "exempt_patterns": ["历史记录", "引用原文", "例：", "例如"],
+        "types": [{"name": n, "pattern": p, "truth": t} for n, p, t, _ in found]
+                or [{"name": "示例总数", "pattern": r"(\d+) 个条目", "truth": {"literal": 0}}],
+    }
+    with open(args.init, "w", encoding="utf-8") as f:
+        json.dump(out, f, ensure_ascii=False, indent=2)
+    print(f"已生成 {args.init}（扫描 {len(md_files)} 份 md，识别出 {len(found)} 类数字声明）：")
+    for n, p, t, hits in found:
+        print(f"  {n}: 模式 {p!r}，命中 {len(hits)}+ 处，如 {hits[0] if hits else '-'}")
+    print("下一步：把 truth 里的 TODO 换成真值命令或字面量，然后跑 "
+          f"python doc_claims.py --config {args.init} --strict")
+    return 0
+
+
 def main():
     ap = argparse.ArgumentParser(description="活文档数字核对器")
-    ap.add_argument("--config", required=True, help="claims 配置 JSON")
+    ap.add_argument("--config", help="claims 配置 JSON")
     ap.add_argument("--strict", action="store_true",
                     help="一处都没核到也判 FAIL（防止模式写错导致静默 0 核对）")
+    ap.add_argument("--init", metavar="OUT.json",
+                    help="脚手架：扫文档生成 claims 初稿（--config 可省）")
     a = ap.parse_args()
+
+    if a.init:
+        return cmd_init(a)
+    if not a.config:
+        ap.error("--init 或 --config 必须给一个")
+    if not os.path.exists(a.config):
+        print(f"配置文件 {a.config} 不存在——第一次用？跑 python doc_claims.py "
+              f"--init {a.config} 生成初稿")
+        return 1
 
     cfg = json.load(open(a.config, encoding="utf-8-sig"))
     types = cfg["types"]

@@ -1,0 +1,25 @@
+name: 'doc-claims'
+description: 'Verify numbers written in your docs (README, manuals) against recomputed truth. Fails CI on drift.'
+author: 'Ayan (阿岩)'
+branding:
+  icon: 'check-square'
+  color: 'blue'
+
+inputs:
+  config:
+    description: 'Path to claims.json'
+    required: false
+    default: 'claims.json'
+  strict:
+    description: 'Fail also when zero claims were checked (guards against a broken pattern config)'
+    required: false
+    default: 'false'
+
+runs:
+  using: 'composite'
+  steps:
+    - shell: bash
+      run: |
+        ARGS="--config ${{ inputs.config }}"
+        if [ "${{ inputs.strict }}" = "true" ]; then ARGS="$ARGS --strict"; fi
+        python3 "${{ github.action_path }}/doc_claims.py" $ARGS
