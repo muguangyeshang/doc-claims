@@ -36,7 +36,10 @@ def truth_value(spec, cache):
     if "literal" in spec:
         v = int(spec["literal"])
     elif "cmd" in spec:
-        r = subprocess.run(spec["cmd"], shell=True, capture_output=True, text=True)
+        # Windows 真机坑：text=True 默认走系统 locale（GBK），子进程输出 UTF-8 会崩。
+        # 显式 UTF-8 + errors=replace，CI(ubuntu)/本地(Windows) 行为一致。
+        r = subprocess.run(spec["cmd"], shell=True, capture_output=True,
+                           text=True, encoding="utf-8", errors="replace")
         if r.returncode != 0:
             raise RuntimeError(f"真值命令失败 rc={r.returncode}: {spec['cmd']}\n{r.stderr}")
         m = re.search(r"\d+", r.stdout)
@@ -137,7 +140,8 @@ def main():
             for t in types:
                 for m in re.finditer(t["pattern"], line):
                     total += 1
-                    written = int(m.group(1))
+                    # 千分位逗号：文档常写 "11,700"，JSON/真值侧是 11700，比对前归一
+                    written = int(m.group(1).replace(",", ""))
                     try:
                         actual = truth_value(t["truth"], cache)
                     except RuntimeError as e:
