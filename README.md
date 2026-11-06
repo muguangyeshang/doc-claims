@@ -2,6 +2,30 @@
 
 [![CI](https://github.com/AYAN-2026/doc-claims/actions/workflows/ci.yml/badge.svg)](https://github.com/AYAN-2026/doc-claims/actions/workflows/ci.yml)
 
+> **Who this is for:** maintainers whose docs contain numbers that drift from code, and whose project runs CI.
+> 中文文档在下方 ↓
+
+**English quick view:** Your README says "46 tests", "5 workflows" — code changes, nobody updates the docs, readers get misled. Unit tests can't catch this: **docs don't run**. doc-claims turns every documented number into a CI assertion: register a regex pattern + a truth-recomputation command, then it scans your docs and compares each claim against the freshly computed value. Drift = red, exit 1.
+
+```bash
+python doc_claims.py --init claims.json              # scaffold config by scanning your md
+python doc_claims.py --config claims.json --strict   # exit 0 = all match, exit 1 = drift (CI red)
+```
+
+Zero third-party dependencies; the truth source is any shell command, so any language's project can use it.
+
+**Is this useful to you in 30 seconds?**
+
+| Question | If yes → |
+|---|---|
+| 1. Does your README/手册 contain integer claims (counts, versions) derived from code? | Keep reading |
+| 2. Does your repo have CI where this check could run? | Use the GitHub Action below |
+| 3. Do you have documented numbers that nobody recomputes? | This tool catches their drift |
+
+All three no → this tool won't help today; 中文详见下方.
+
+---
+
 **Problem:** 你的 README 写着 "46 tests"、"5 workflows"。改了代码没人记得改文档，读的人被误导。单元测试拦不住这个——文档自己不会跑。
 
 **doc-claims 把文档里的数字变成 CI 断言：** 每类数字登记成「正则模式 + 真值重算命令」，扫描活文档逐处与当场重算值比对，漂移即红。

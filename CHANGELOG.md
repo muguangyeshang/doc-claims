@@ -2,6 +2,14 @@
 
 本项目遵循 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，版本号遵循语义化版本。
 
+## [1.1.3] - 2026-11-07
+
+### 新增
+- README 首屏双语化：英文 Problem + Quick view + 快速命令段，中文正文保留
+- README 加"30 秒受益自检框"：3 条 yes/no，目标用户 30 秒内判断值不值得继续读
+- `SECURITY.md`（安全策略：**本工具会执行 claims.json 里的 shell 命令**，把它当 build script 对待——这是唯一需要交代的攻击面）
+- `CODE_OF_CONDUCT.md`（Contributor Covenant 2.1）
+
 ## [1.1.1] - 2026-11-07
 
 ### 新增
