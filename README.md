@@ -1,6 +1,6 @@
 # doc-claims
 
-[![CI](https://github.com/AYAN-2026/doc-claims/actions/workflows/ci.yml/badge.svg)](https://github.com/AYAN-2026/doc-claims/actions/workflows/ci.yml)
+[![CI](https://github.com/muguangyeshang/doc-claims/actions/workflows/ci.yml/badge.svg)](https://github.com/muguangyeshang/doc-claims/actions/workflows/ci.yml)
 
 > **Who this is for:** maintainers whose docs contain numbers that drift from code, and whose project runs CI.
 > 中文文档在下方 ↓
